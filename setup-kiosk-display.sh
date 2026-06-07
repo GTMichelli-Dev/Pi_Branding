@@ -129,7 +129,7 @@ grep -q "^disable_splash=1" "$CONFIG" || echo "disable_splash=1" >> "$CONFIG"
 
 echo "==> Updating kernel cmdline in $CMDLINE (kept single-line)"
 cp "$CMDLINE" "$CMDLINE.bak-$TS"
-read -r CMD < "$CMDLINE"
+read -r CMD < "$CMDLINE" || true   # cmdline.txt has no trailing newline; read returns 1 at EOF, which would trip set -e
 for opt in quiet splash plymouth.ignore-serial-consoles logo.nologo vt.global_cursor_default=0 consoleblank=0; do
   case " $CMD " in *" $opt "*) ;; *) CMD="$CMD $opt" ;; esac
 done
