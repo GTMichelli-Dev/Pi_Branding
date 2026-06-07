@@ -1,131 +1,105 @@
 # Pi_Branding
 
-Brands a Raspberry Pi as a Michelli product: replaces the boot splash with the
-Michelli logo on a grey background, silences the boot sequence, and presents a
-clean grey desktop with no icons. Display rotation is optional and off by
-default. Targets **Raspberry Pi OS Trixie** (and Bookworm) on Pi 4 / Pi 5.
+Brands a Raspberry Pi as a Michelli appliance: Michelli boot splash, quiet boot, a light-grey desktop with the logo centred and no icons, the Michelli "M" as the taskbar menu button, no launcher buttons, and optional screen rotation. Targets **Raspberry Pi OS Trixie** (and Bookworm) on Pi 4 / Pi 5.
 
-### Quick install (no rotation)
+### Quick start
 
-On the Pi:
+On the Pi — interactive (prompts for display and rotation):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/GTMichelli-Dev/Pi_Branding/main/setup-kiosk-display.sh | sudo bash
 sudo reboot
 ```
 
-No arguments needed — the script pulls `Michelli-Logo.png` from this repo
-automatically and leaves the screen orientation untouched. It is a **one-shot
-provisioning script**: run once, reboot once, branding is permanent. It does
-not run on every boot.
+That's it. Run once, answer the two prompts, reboot once — the branding is permanent. The script does **not** run on every boot.
 
-Safer for a fleet — download, inspect, then run:
+### What it does
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/GTMichelli-Dev/Pi_Branding/main/setup-kiosk-display.sh -o brand.sh
-less brand.sh
-sudo bash brand.sh
-```
+- **Boot splash** — clones the stock `pix` Plymouth theme into its own `michelli` theme (so OS updates don't overwrite it), shows the Michelli logo on light grey.
+- **Quiet boot** — removes the rainbow square, kernel text, corner Raspberry logos, blinking cursor, and screen blanking.
+- **Desktop** — light-grey wallpaper with the Michelli logo centred, and Home / Wastebasket / drive icons hidden.
+- **Taskbar** — the menu button becomes the Michelli "M"; the browser / file-manager / terminal launcher buttons are removed (clock, wifi, tray stay).
+- **Rotation (optional)** — rotates the desktop (kanshi) and the boot splash (cmdline) together.
 
-### What it changes
+All edited boot files are backed up next to the original as `*.bak-<timestamp>`; replaced theme icons are backed up as `*.orig`.
 
-- **Boot logo** — clones the stock `pix` Plymouth theme into its own theme (`michelli`) and drops in the logo, so OS/package updates never overwrite it.
-- **Boot background** — solid grey behind the logo.
-- **Quiet boot** — removes the rainbow square (`disable_splash=1`), kernel text (`quiet`), corner Raspberry logos (`logo.nologo`), blinking cursor (`vt.global_cursor_default=0`), and screen blanking (`consoleblank=0`).
-- **Desktop** — solid grey wallpaper with Home / Wastebasket / mounted-drive icons hidden (pcmanfm, under both labwc/Wayland and X11).
-- **Rotation (optional, off by default)** — see below.
+### The prompts
 
-All edited boot files are backed up next to the original with a `.bak-<timestamp>` suffix.
+When you don't pass arguments, it asks two things:
 
-### Arguments
+- **Display** — a numbered list of outputs (auto-detected, or `DSI-1 / DSI-2 / HDMI-A-1 / HDMI-A-2`). For the Touch Display 2 this is usually `DSI-2`.
+- **Rotation** — `1) Normal  2) Right (90 clockwise)  3) Inverted (180)  4) Left`. Picking a direction sets both the desktop and the boot-splash rotation correctly.
+
+### Non-interactive / fleet
+
+Pass everything to skip the prompts (good for scripted rollout):
 
 ```bash
-sudo bash setup-kiosk-display.sh [logo] [theme] [rotate] [output] [panel_orientation] [boot_mode]
+sudo bash setup-kiosk-display.sh [logo] [theme] [rotate] [output] [panel_orientation] [boot_mode] [menu_icon] [icon_theme]
 ```
 
-| # | Argument            | Default                            | Notes                                                                 |
-|---|---------------------|------------------------------------|-----------------------------------------------------------------------|
-| 1 | `logo`              | `Michelli-Logo.png` from this repo | Local path, any URL, or `""` to keep the current splash               |
-| 2 | `theme`             | `michelli`                         | Name of the cloned Plymouth theme                                     |
-| 3 | `rotate`            | *(none)*                           | DESKTOP rotation (kanshi): `normal` / `90` / `180` / `270`            |
-| 4 | `output`            | `HDMI-A-1`                         | Wayland output name; use `DSI-1` for Touch Display 2                  |
-| 5 | `panel_orientation` | *(none)*                           | BOOT/LOGO rotation (cmdline): `normal` / `left_side_up` / `right_side_up` / `upside_down` |
-| 6 | `boot_mode`         | `720x1280M@60D`                    | Connector mode for the cmdline line (Touch Display 2 7"); only used with arg 5 |
-
-`90` = 90° clockwise (i.e. rotated "right"). Leave args 3 and 5 empty to skip
-rotation entirely.
-
-### Rotation
-
-Two independent layers:
-
-- **Desktop** (arg 3, `rotate`) is rotated by kanshi — safe and reversible.
-- **Boot / logo / console** (arg 5, `panel_orientation`) is rotated in `cmdline.txt`. On the Touch Display 2 this one usually rotates the *whole* stack (logo, console, desktop, touch). A bad `boot_mode` can black-screen the panel, so **test on one unit first**.
-
-**Touch Display 2 ("rotate right") — test the boot layer alone first:**
+Touch Display 2, rotated right, no prompts:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/GTMichelli-Dev/Pi_Branding/main/setup-kiosk-display.sh | sudo bash -s -- "" michelli "" DSI-1 right_side_up
-sudo reboot
+curl -fsSL https://raw.githubusercontent.com/GTMichelli-Dev/Pi_Branding/main/setup-kiosk-display.sh | sudo bash -s -- "" michelli 270 DSI-2 right_side_up
 ```
 
-After reboot, check logo, desktop, and touch:
+| # | Argument            | Default                          | Notes                                                            |
+|---|---------------------|----------------------------------|------------------------------------------------------------------|
+| 1 | `logo`              | `Michelli-Logo.png` (repo)       | Local path, URL, or `""` to keep current splash                  |
+| 2 | `theme`             | `michelli`                       | Cloned Plymouth theme name                                       |
+| 3 | `rotate`            | *(prompt)*                       | Desktop transform: `normal` `90` `180` `270` — **Right = 270**   |
+| 4 | `output`            | *(prompt)*                       | Wayland output, e.g. `DSI-2`                                     |
+| 5 | `panel_orientation` | *(prompt)*                       | Boot/splash: `normal` `left_side_up` `right_side_up` `upside_down` |
+| 6 | `boot_mode`         | `720x1280M@60D`                  | Connector mode for the rotation line (Touch Display 2 7")        |
+| 7 | `menu_icon`         | `Michelli-Menu.png` (repo)       | Square taskbar menu icon, or `""` to skip                        |
+| 8 | `icon_theme`        | `PiXtrix`                        | Icon theme that holds the `start-here` menu icon                 |
+| 9 | `desktop_logo`      | `Michelli-Desktop.png` (repo)    | Larger logo centred on the desktop; `""` falls back to the splash logo |
 
-- All three correct → that's your fleet command.
-- Logo rotated but desktop still landscape → add the desktop knob: `... | sudo bash -s -- "" michelli 90 DSI-1 right_side_up`
-- Rotated the wrong way → swap `right_side_up` for `left_side_up` (and `90` for `270`).
-- Black screen → SSH in or edit the SD card, delete the `video=DSI-1:...` token from `/boot/firmware/cmdline.txt`. For a 5-inch panel or odd EDID, pass a different `boot_mode` as arg 6 (confirm with `wlr-randr` or `kmsprint -m`).
-
-> Don't blindly set both arg 3 and arg 5: if `panel_orientation` already turns
-> the desktop, adding a kanshi transform on top lands you 180° off.
-
-### Examples
-
-```bash
-# No rotation (just branding):
-curl -fsSL <raw-url>/setup-kiosk-display.sh | sudo bash
-
-# Different theme name, default logo, no rotation:
-curl -fsSL <raw-url>/setup-kiosk-display.sh | sudo bash -s -- "" jollyroger
-
-# One-off local logo:
-sudo bash setup-kiosk-display.sh /home/pi/other-logo.png
-```
-
-Grey shade is set near the top of the script: `GREY_HEX` for the desktop and
-`GREY_R/G/B` (0–1) for the Plymouth background.
+> "Right" is 90° clockwise; the desktop expresses it as kanshi transform **270** and the boot splash as `right_side_up`.
 
 ### Reverting
 
-The stock `pix` theme is left untouched, so reverting is quick.
-
 ```bash
-# 1) Restore the boot files from the timestamped backups
+# boot files
 sudo cp /boot/firmware/config.txt.bak-*  /boot/firmware/config.txt
 sudo cp /boot/firmware/cmdline.txt.bak-* /boot/firmware/cmdline.txt
 
-# 2) Switch back to the stock splash and rebuild the initramfs
+# boot splash back to stock
 sudo plymouth-set-default-theme --rebuild-initrd pix
-sudo rm -rf /usr/share/plymouth/themes/michelli   # optional: remove the clone
+sudo rm -rf /usr/share/plymouth/themes/michelli
 
-# 3) Restore the default desktop (icons + stock wallpaper)
-rm -f ~/.config/pcmanfm/LXDE-pi/desktop-items-*.conf
+# desktop + rotation
+rm -f ~/.config/pcmanfm/default/desktop-items-*.conf ~/.config/pcmanfm/LXDE-pi/desktop-items-*.conf
+rm -f ~/.config/kanshi/config
+rm -f ~/.config/wf-panel-pi.ini
 
-# 4) If rotation was applied, remove it
-rm -f ~/.config/kanshi/config        # desktop rotation
+# taskbar menu icon back to stock
+for f in /usr/share/icons/PiXtrix/*/places/start-here.png.orig; do sudo mv "$f" "${f%.orig}"; done
+sudo mv /usr/share/icons/PiXtrix/scalable/places/start-here.svg.orig \
+        /usr/share/icons/PiXtrix/scalable/places/start-here.svg 2>/dev/null
+sudo gtk-update-icon-cache -f /usr/share/icons/PiXtrix
 
 sudo reboot
 ```
 
-With several backups, pick the specific timestamp instead of the `*` glob.
+With several timestamped backups, pick the specific one instead of the `*` glob.
+
+### Notes
+
+- The display connector (`DSI-1` vs `DSI-2`) depends on which port the panel uses; run `wlr-randr` to confirm, or standardise the port across the fleet.
+- The Michelli menu icon and the desktop logo replace files inside the `PiXtrix` icon theme and `/usr/share/pixmaps`; a theme package update could overwrite them — re-running the script restores everything (originals are kept as `*.orig`).
+- On Pi 5 with a DSI panel, the bootloader can't drive the display, so the first thing the panel shows is the Michelli Plymouth splash — there's no earlier logo to change.
 
 ### Requirements
 
 - Raspberry Pi OS Trixie or Bookworm (Pi 4 / Pi 5)
-- `plymouth` and `plymouth-themes` (default on the desktop image)
-- `curl` or `wget` on the device (to pull the logo)
+- `plymouth` and `plymouth-themes`
+- `curl` or `wget` on the device
 
 ### Files
 
 - `setup-kiosk-display.sh` — the provisioning script
-- `Michelli-Logo.png` — the boot logo
+- `Michelli-Logo.png` — boot splash logo
+- `Michelli-Desktop.png` — larger logo centred on the desktop
+- `Michelli-Menu.png` — taskbar menu-button icon

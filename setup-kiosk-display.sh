@@ -36,6 +36,7 @@ PANEL_ORIENT="${5:-}"                           # boot: ""|normal|left_side_up|r
 BOOT_MODE="${6:-720x1280M@60D}"                 # connector mode for the cmdline rotation line
 MENU_SRC="${7:-$REPO_RAW/Michelli-Menu.png}"   # square taskbar menu icon, or "" to skip
 ICON_THEME="${8:-PiXtrix}"                      # icon theme holding the 'start-here' menu icon
+WALL_SRC="${9:-$REPO_RAW/Michelli-Desktop.png}" # larger centred desktop logo, or "" to use the splash logo
 GREY_HEX="#aaaaaa"                              # desktop fill (light grey)
 GREY_R="0.67"; GREY_G="0.67"; GREY_B="0.67"     # plymouth bg (light grey), 0-1
 WALL_PATH="/usr/share/pixmaps/michelli-logo.png" # where the centred desktop logo is installed
@@ -161,12 +162,27 @@ case "$LOGO_SRC" in
   *) [ -f "$LOGO_SRC" ] || { echo "ERROR: logo '$LOGO_SRC' not found." >&2; exit 1; }; LOGO_PATH="$LOGO_SRC" ;;
 esac
 
-if [ -n "$LOGO_PATH" ]; then
-  install -D -m 0644 "$LOGO_PATH" "$WALL_PATH"
+# Resolve the centred desktop logo (the larger image); fall back to the splash logo
+WALL_TMP=""; DESKTOP_LOGO=""
+case "$WALL_SRC" in
+  "") ;;
+  http://*|https://*)
+    WALL_TMP="$(mktemp /tmp/pi-wall.XXXXXX.png)"
+    if command -v curl >/dev/null 2>&1; then curl -fsSL "$WALL_SRC" -o "$WALL_TMP" || true
+    elif command -v wget >/dev/null 2>&1; then wget -qO "$WALL_TMP" "$WALL_SRC" || true; fi
+    if [ -s "$WALL_TMP" ]; then DESKTOP_LOGO="$WALL_TMP"; else rm -f "$WALL_TMP"; WALL_TMP=""; fi
+    ;;
+  *) [ -f "$WALL_SRC" ] && DESKTOP_LOGO="$WALL_SRC" ;;
+esac
+[ -z "$DESKTOP_LOGO" ] && [ -n "$LOGO_PATH" ] && DESKTOP_LOGO="$LOGO_PATH"
+
+if [ -n "$DESKTOP_LOGO" ]; then
+  install -D -m 0644 "$DESKTOP_LOGO" "$WALL_PATH"
   WALL_MODE="center"; WALL_LINE="wallpaper=$WALL_PATH"
 else
   WALL_MODE="color";  WALL_LINE=""
 fi
+[ -n "$WALL_TMP" ] && rm -f "$WALL_TMP" || true
 
 # -----------------------------------------------------------------------------
 # 1) Clone the stock theme -> our own (survives package updates)
