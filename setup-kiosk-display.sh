@@ -167,7 +167,7 @@ show_trash=0
 show_mounts=0
 EOF
 }
-for f in desktop-items-0.conf desktop-items-HDMI-A-1.conf desktop-items-HDMI-A-2.conf desktop-items-DSI-1.conf; do
+for f in desktop-items-0.conf desktop-items-HDMI-A-1.conf desktop-items-HDMI-A-2.conf desktop-items-DSI-1.conf desktop-items-DSI-2.conf "desktop-items-$OUTPUT.conf"; do
   write_desktop_conf "$DCONF_DIR/$f"
 done
 chown -R "$TARGET_USER":"$TARGET_USER" "$USER_HOME/.config/pcmanfm"
